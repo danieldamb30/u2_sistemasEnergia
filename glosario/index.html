@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Glosario energético interactivo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --primary:#44113C; --primary-2:#67245C; --accent:#F1D8EB;
+    --ink:#28212B; --muted:#766D79; --surface:#FFFFFF; --canvas:#F8F5F8;
+    --line:#E9E1E9; --shadow:0 12px 34px rgba(68,17,60,.09);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:transparent;color:var(--ink);font-family:'Poppins',sans-serif}
+  .glossary{width:100%;max-width:1200px;margin:0 auto;padding:clamp(12px,2.5vw,28px);animation:enter .7s cubic-bezier(.2,.7,.2,1) both}
+  .toolbar{display:grid;grid-template-columns:minmax(200px,1fr) auto;gap:12px;align-items:center;margin-bottom:18px}
+  .search-wrap{position:relative}
+  .search-wrap svg{position:absolute;left:16px;top:50%;transform:translateY(-50%);width:19px;height:19px;stroke:#8B7A89}
+  #search{width:100%;height:52px;border:1px solid var(--line);border-radius:15px;background:var(--surface);padding:0 16px 0 46px;font:400 14px 'Poppins',sans-serif;color:var(--ink);outline:none;transition:.2s}
+  #search:focus{border-color:var(--primary);box-shadow:0 0 0 4px rgba(68,17,60,.09)}
+  .count{font-size:12px;color:var(--muted);white-space:nowrap;padding:0 4px}
+  .filters{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 22px}
+  .filter{border:1px solid var(--line);border-radius:999px;padding:9px 14px;background:#fff;color:#675C68;font:500 12px 'Poppins',sans-serif;cursor:pointer;transition:transform .2s,background .2s,color .2s,border-color .2s}
+  .filter:hover{transform:translateY(-2px);border-color:#BDA6B9}
+  .filter.active{background:var(--primary);border-color:var(--primary);color:white;box-shadow:0 5px 14px rgba(68,17,60,.18)}
+  .grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:15px}
+  .term-card{position:relative;min-width:0;border:1px solid var(--line);border-radius:19px;background:var(--surface);padding:20px;display:flex;flex-direction:column;min-height:225px;overflow:hidden;box-shadow:0 3px 12px rgba(35,15,32,.025);transition:transform .25s,box-shadow .25s,border-color .25s;animation:cardIn .5s both}
+  .term-card:before{content:"";position:absolute;inset:0 auto 0 0;width:4px;background:var(--primary);transform:scaleY(0);transform-origin:bottom;transition:transform .25s}
+  .term-card:hover{transform:translateY(-5px);box-shadow:var(--shadow);border-color:#D9C6D6}
+  .term-card:hover:before{transform:scaleY(1)}
+  .card-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:15px}
+  .icon-box{width:40px;height:40px;border-radius:13px;background:#F5ECF3;color:var(--primary);display:grid;place-items:center;flex:0 0 auto}
+  .icon-box svg{width:21px;height:21px;stroke:currentColor;stroke-width:1.8;fill:none;stroke-linecap:round;stroke-linejoin:round}
+  .category{font-size:10px;letter-spacing:.06em;text-transform:uppercase;font-weight:600;color:#8A6A84;background:#F8F2F7;border-radius:7px;padding:6px 8px;text-align:right}
+  .term-card h3{font-size:16px;line-height:1.45;margin:0 0 9px;color:var(--primary);font-weight:600;letter-spacing:-.02em}
+  .term-card p{font-size:12.5px;line-height:1.75;color:#645A66;margin:0 0 18px;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+  .card-bottom{margin-top:auto;padding-top:12px;border-top:1px solid #F0EAF0;display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .source{font-size:10px;color:#8A7E8B;line-height:1.5}
+  .details{border:0;background:transparent;color:var(--primary);font:600 11px 'Poppins',sans-serif;cursor:pointer;display:flex;align-items:center;gap:5px;padding:5px 0;white-space:nowrap}
+  .details svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;transition:transform .2s}
+  .details:hover svg{transform:translateX(3px)}
+  .empty{display:none;text-align:center;padding:48px 20px;background:#fff;border:1px dashed #D9C6D6;border-radius:18px;color:var(--muted);font-size:13px}
+  .empty strong{display:block;color:var(--primary);font-size:16px;margin-bottom:6px}
+  .modal{position:fixed;inset:0;z-index:9999;display:none;align-items:center;justify-content:center;padding:18px;background:rgba(30,12,28,.58);backdrop-filter:blur(6px)}
+  .modal.open{display:flex;animation:fade .2s ease both}
+  .dialog{width:min(560px,100%);max-height:min(85vh,700px);overflow:auto;background:#fff;border-radius:23px;padding:clamp(22px,5vw,34px);box-shadow:0 25px 90px rgba(0,0,0,.22);animation:pop .25s cubic-bezier(.2,.7,.2,1) both}
+  .dialog-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}
+  .dialog .icon-box{width:48px;height:48px;margin-bottom:18px}
+  .close{border:0;width:36px;height:36px;border-radius:50%;background:#F6F0F5;color:var(--primary);font-size:22px;cursor:pointer;line-height:1}
+  .dialog .category{display:inline-block;margin-bottom:12px}
+  .dialog h2{font-size:clamp(20px,4vw,26px);line-height:1.35;color:var(--primary);margin:0 0 14px;font-weight:600}
+  .dialog p{font-size:14px;line-height:1.9;color:#5D535F;margin:0 0 22px}
+  .source-box{background:#F8F3F7;border-radius:13px;padding:14px 16px;font-size:12px;color:#6D5D6B;line-height:1.7}
+  .source-box strong{display:block;color:var(--primary);font-size:10px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px}
+  .footer-note{font-size:10px;color:#9A8F9B;text-align:center;margin:20px 0 0}
+  @keyframes enter{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes cardIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes fade{from{opacity:0}to{opacity:1}}
+  @keyframes pop{from{opacity:0;transform:translateY(10px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+  @media(max-width:900px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  @media(max-width:560px){.glossary{padding:10px}.toolbar{grid-template-columns:1fr;gap:8px}.count{padding:0 2px}.grid{grid-template-columns:1fr;gap:11px}.term-card{min-height:0;padding:18px}.term-card p{-webkit-line-clamp:unset}.filters{gap:7px;margin-bottom:16px}.filter{padding:8px 11px;font-size:11px}.category{font-size:9px}}
+  @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<section class="glossary" aria-label="Glosario interactivo de energía">
+  <div class="toolbar">
+    <label class="search-wrap">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></svg>
+      <input id="search" type="search" placeholder="Buscar un término o concepto…" aria-label="Buscar en el glosario">
+    </label>
+    <div class="count" id="count" aria-live="polite">11 conceptos</div>
+  </div>
+  <nav class="filters" id="filters" aria-label="Filtrar por categoría">
+    <button class="filter active" data-filter="Todos" aria-pressed="true">Todos</button>
+    <button class="filter" data-filter="Planeación" aria-pressed="false">Planeación</button>
+    <button class="filter" data-filter="Mercado eléctrico" aria-pressed="false">Mercado eléctrico</button>
+    <button class="filter" data-filter="Usuarios" aria-pressed="false">Usuarios</button>
+    <button class="filter" data-filter="Tarifas" aria-pressed="false">Tarifas</button>
+  </nav>
+  <div class="grid" id="grid"></div>
+  <div class="empty" id="empty"><strong>No encontramos coincidencias</strong>Prueba con otra palabra o cambia el filtro.</div>
+  <p class="footer-note">Selecciona una tarjeta para consultar la definición completa y su referencia.</p>
+</section>
+
+<div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+  <div class="dialog">
+    <div class="dialog-head">
+      <div class="icon-box" id="modal-icon"></div>
+      <button class="close" id="close" aria-label="Cerrar definición">&times;</button>
+    </div>
+    <span class="category" id="modal-category"></span>
+    <h2 id="modal-title"></h2>
+    <p id="modal-definition"></p>
+    <div class="source-box"><strong>Referencia</strong><span id="modal-source"></span></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const icons = {
+    energy:'<svg viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 10-13h-7z"/></svg>',
+    shield:'<svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-11V5l-8-3-8 3v6c0 7 8 11 8 11z"/><path d="m9 12 2 2 4-4"/></svg>',
+    flow:'<svg viewBox="0 0 24 24"><path d="M3 6h7l3 6h8"/><path d="m17 8 4 4-4 4"/><path d="M3 18h5l3-6"/></svg>',
+    chart:'<svg viewBox="0 0 24 24"><path d="M4 19V5M4 19h17"/><path d="m7 15 4-4 3 2 6-7"/></svg>',
+    exchange:'<svg viewBox="0 0 24 24"><path d="M4 7h15l-3-3"/><path d="m19 7-3 3M20 17H5l3 3"/><path d="m5 17 3-3"/></svg>',
+    sun:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32 1.41 1.41M2 12h2m16 0h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>',
+    network:'<svg viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="6" rx="1"/><rect x="2" y="16" width="6" height="6" rx="1"/><rect x="16" y="16" width="6" height="6" rx="1"/><path d="M12 8v4M5 16v-4h14v4"/></svg>',
+    scales:'<svg viewBox="0 0 24 24"><path d="M12 3v18M5 7h14M7 7l-4 7h8L7 7zm10 0-4 7h8l-4-7zM8 21h8"/></svg>',
+    clock:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+    building:'<svg viewBox="0 0 24 24"><path d="M3 21h18M5 21V7l7-4 7 4v14"/><path d="M9 10h1m4 0h1m-6 4h1m4 0h1m-4 7v-4"/></svg>',
+    users:'<svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="4"/><path d="M2 21v-2a7 7 0 0 1 14 0v2M17 4a4 4 0 0 1 0 8m2 3a6 6 0 0 1 3 5v1"/></svg>'
+  };
+  const terms = [
+    {term:'Balance Energético Colombiano (BECO)',category:'Planeación',icon:'energy',definition:'Herramienta de planificación energética que registra los flujos de producción, transformación y consumo de 19 tipos de energéticos en Colombia, alineada con estándares internacionales.',source:'UPME, 2024.'},
+    {term:'Cargo por confiabilidad',category:'Mercado eléctrico',icon:'shield',definition:'Mecanismo que remunera la disponibilidad de generación firme (como plantas térmicas) para garantizar el suministro durante crisis, implementado mediante subastas de Obligaciones de Energía Firme (OEF).',source:'Gestornormativo, 2019.'},
+    {term:'Diagramas de Sankey',category:'Planeación',icon:'flow',definition:'Representación gráfica de los flujos energéticos en el BECO, donde el grosor de las flechas indica la cantidad de energía transferida, útil para analizar eficiencias y pérdidas.',source:'UPME, 2023.'},
+    {term:'Estructura tarifaria (Mercado Regulado)',category:'Tarifas',icon:'chart',definition:'Fórmula que incluye costos de generación (G), transmisión (T), distribución (D), comercialización (C), pérdidas (P) y restricciones (R), establecida en la Resolución CREG 119 de 2007.',source:'Resolución CREG 119, 2007.'},
+    {term:'Mercado de Energía Mayorista (MEM)',category:'Mercado eléctrico',icon:'exchange',definition:'Sistema de transacciones eléctricas en Colombia, compuesto por contratos bilaterales (80 % del mercado) y un mercado spot con precios horarios determinados por el operador XM.',source:'XM, 2024.'},
+    {term:'Prosumidores',category:'Usuarios',icon:'sun',definition:'Usuarios que generan y consumen energía (por ejemplo, con paneles solares), con capacidad ≤ 1 MW y medición bidireccional, regulados por la Resolución CREG 174 de 2021.',source:'Resolución CREG 174, 2021.'},
+    {term:'Sistema Eléctrico Colombiano (SEC)',category:'Mercado eléctrico',icon:'network',definition:'Estructura institucional y operativa del sector eléctrico en Colombia, que divide el mercado en generación, transmisión, distribución y comercialización, regulado por las Leyes 142 y 143 de 1994.',source:'Ley 143, 1994.'},
+    {term:'Subsidios cruzados',category:'Tarifas',icon:'scales',definition:'Esquema que subsidia a estratos 1–3 (hasta 60 % del costo) y aplica contribuciones del 20 % a estratos 5–6 y sectores industriales/comerciales.',source:'Decreto 3860, 2005.'},
+    {term:'Tarifas horarias',category:'Tarifas',icon:'clock',definition:'Estructura que incentiva el consumo en horas valle (00:00–06:00) y penaliza en horas punta (18:00–22:00), regulada por la Resolución CREG 012 de 2020.',source:'Resolución CREG 012, 2020.'},
+    {term:'Usuarios no regulados',category:'Usuarios',icon:'building',definition:'Grandes consumidores (demanda ≥ 0,1 MW) que negocian precios y condiciones directamente en el mercado.',source:'Ley 142, 1994.'},
+    {term:'Usuarios regulados',category:'Usuarios',icon:'users',definition:'Consumidores con demanda menor a 0,1 MW o consumo inferior a 55 MWh/mes, sujetos a tarifas fijadas por la CREG.',source:'Ley 142, 1994.'}
+  ];
+  const grid=document.getElementById('grid'), search=document.getElementById('search'), count=document.getElementById('count'), empty=document.getElementById('empty');
+  const modal=document.getElementById('modal'); let active='Todos'; let lastFocus=null;
+  function render(){
+    const q=search.value.trim().toLocaleLowerCase('es');
+    const shown=terms.filter(t=>(active==='Todos'||t.category===active)&&(`${t.term} ${t.definition} ${t.source} ${t.category}`).toLocaleLowerCase('es').includes(q));
+    grid.innerHTML='';
+    shown.forEach((t,i)=>{
+      const card=document.createElement('article'); card.className='term-card'; card.style.animationDelay=(i*45)+'ms';
+      card.innerHTML=`<div class="card-top"><div class="icon-box">${icons[t.icon]}</div><span class="category">${t.category}</span></div><h3></h3><p></p><div class="card-bottom"><span class="source"></span><button class="details" type="button">Explorar <svg viewBox="0 0 24 24"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></button></div>`;
+      card.querySelector('h3').textContent=t.term;
+      card.querySelector('p').textContent=t.definition;
+      card.querySelector('.source').textContent=t.source;
+      card.querySelector('.details').addEventListener('click',()=>openModal(t,card.querySelector('.details')));
+      card.addEventListener('click',e=>{if(!e.target.closest('button'))openModal(t,card.querySelector('.details'));});
+      grid.appendChild(card);
+    });
+    count.textContent=`${shown.length} ${shown.length===1?'concepto':'conceptos'}`;
+    empty.style.display=shown.length?'none':'block'; grid.style.display=shown.length?'grid':'none';
+  }
+  function openModal(t,focus){
+    lastFocus=focus; document.getElementById('modal-icon').innerHTML=icons[t.icon];
+    document.getElementById('modal-category').textContent=t.category;
+    document.getElementById('modal-title').textContent=t.term;
+    document.getElementById('modal-definition').textContent=t.definition;
+    document.getElementById('modal-source').textContent=t.source;
+    modal.classList.add('open'); document.getElementById('close').focus(); document.body.style.overflow='hidden';
+  }
+  function closeModal(){modal.classList.remove('open');document.body.style.overflow='';if(lastFocus)lastFocus.focus();}
+  search.addEventListener('input',render);
+  document.getElementById('filters').addEventListener('click',e=>{
+    const btn=e.target.closest('button[data-filter]');if(!btn)return;
+    active=btn.dataset.filter;
+    document.querySelectorAll('.filter').forEach(b=>{const yes=b===btn;b.classList.toggle('active',yes);b.setAttribute('aria-pressed',String(yes));});
+    render();
+  });
+  document.getElementById('close').addEventListener('click',closeModal);
+  modal.addEventListener('click',e=>{if(e.target===modal)closeModal();});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&modal.classList.contains('open'))closeModal();});
+  render();
+})();
+</script>
+</body>
+</html>
